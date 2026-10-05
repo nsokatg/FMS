@@ -196,15 +196,14 @@
             currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
-                // 最終行（合計行）の場合は、入力欄にせず、スプレッドシートから取得した値（計算結果など）をそのままテキストとして表示する
                 if (isTotalRow) {
                     td.innerText = cellText !== null ? cellText : '';
                 } else {
-                    // 通常の行は入力可能なテキストボックスにする
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cellText !== null ? cellText : '';
                     
+                    // 入力時のデータを即時反映
                     input.oninput = function() {
                         currentTableData[i][colIndex] = input.value;
                     };
@@ -225,7 +224,6 @@
         
         const newRow = new Array(totalCols).fill('');
         
-        // 最終行（合計行）の直前に挿入する
         currentTableData.splice(currentTableData.length - 1, 0, newRow);
         
         renderTable();
@@ -269,9 +267,31 @@
         loadingEl.style.display = 'block';
 
         try {
+            // 【追加対策】保存ボタンを押した瞬間、画面上のすべてのインプット要素から最新の値を確実に回収する
+            const tbody = document.getElementById('tableBody');
+            const trs = tbody.querySelectorAll('tr');
+            
+            trs.forEach((tr, i) => {
+                const dataIndex = i + 1; // ヘッダーを除いたデータ行のインデックス
+                if (dataIndex < currentTableData.length - 1) { // 明細行のみ対象
+                    const inputs = tr.querySelectorAll('input');
+                    inputs.forEach((input) => {
+                        // どの列のインプットか特定するため、td要素のインデックスを調べる
+                        const td = input.parentElement;
+                        const colIndex = Array.from(tr.children).indexOf(td);
+                        if (colIndex !== -1) {
+                            currentTableData[dataIndex][colIndex] = input.value;
+                        }
+                    });
+                }
+            });
+
+            // 最後の行（合計行）を除外したデータだけを送信データとして切り出す
+            const dataToSend = currentTableData.slice(0, currentTableData.length - 1);
+
             const response = await fetch(GAS_API_URL, {
                 method: "POST",
-                body: JSON.stringify(currentTableData),
+                body: JSON.stringify(dataToSend),
                 headers: {
                     "Content-Type": "text/plain;charset=utf-8"
                 }
