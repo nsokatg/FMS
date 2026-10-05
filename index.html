@@ -108,7 +108,7 @@
     </div>
 
 <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw2FXAAl6lnoOyEWHGFFQLujtnTg0MVcbwnlbEfV3eTUtH-WUmUipbMfM3bLM3tRDyoyg/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby0x78HWq-FWw98h3o2WgS_jukEJnoZR03N21OLKGXNrkzu4aoDzNqHaIMKTCcEanjw4Q/exec";
 
     const colWidths = [220, 120, 120]; 
     const defaultColWidth = 120;
@@ -259,25 +259,23 @@
         loadingEl.style.display = 'block';
 
         try {
-            // 画面上の最新のインプット値をすべて回収する
+            // 【重要】保存ボタンを押した瞬間、画面上のすべての入力ボックスから確実に最新の値を再取得する
             const tbody = document.getElementById('tableBody');
             const trs = tbody.querySelectorAll('tr');
             
-            trs.forEach((tr, i) => {
-                const dataIndex = i + 1;
-                if (dataIndex < currentTableData.length - 1) {
-                    const inputs = tr.querySelectorAll('input');
-                    inputs.forEach((input) => {
-                        const td = input.parentElement;
-                        const colIndex = Array.from(tr.children).indexOf(td);
-                        if (colIndex !== -1) {
+            trs.forEach((tr, rowIndex) => {
+                const dataIndex = rowIndex + 1; // ヘッダー分をずらす
+                if (dataIndex < currentTableData.length - 1) { // 合計行の手前まで
+                    const tds = tr.querySelectorAll('td');
+                    tds.forEach((td, colIndex) => {
+                        const input = td.querySelector('input');
+                        if (input) {
                             currentTableData[dataIndex][colIndex] = input.value;
                         }
                     });
                 }
             });
 
-            // 合計行も含めて全データを送信する（GAS側で合計行の数式を保護・復元する仕組みにしました）
             const response = await fetch(GAS_API_URL, {
                 method: "POST",
                 body: JSON.stringify(currentTableData),
