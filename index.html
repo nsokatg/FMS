@@ -65,6 +65,12 @@
             outline: none;
             color: #2d3748;
         }
+        /* マイナス値の入力欄・セルを赤字にするスタイル */
+        .is-negative input,
+        td.is-negative {
+            color: #e53e3e !important;
+            font-weight: 500;
+        }
         td input:focus {
             background: #fff;
             box-shadow: inset 0 0 0 2px #3182ce;
@@ -178,6 +184,18 @@
         return text;
     }
 
+    // 値がマイナスかどうかを判定する補助関数
+    function checkIsNegative(val) {
+        if (val === null || val === undefined) return false;
+        const str = val.toString().trim();
+        // 半角ハイフン (-) または全角マイナス (ー, −) で始まる、あるいは数値として0未満の場合
+        if (str.startsWith('-') || str.startsWith('ー') || str.startsWith('−')) {
+            return true;
+        }
+        let num = Number(str.replace(/[,円]/g, ''));
+        return !isNaN(num) && num < 0;
+    }
+
     function renderTable() {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
@@ -218,13 +236,28 @@
                     } else {
                         td.innerText = cellText !== null ? cellText : '';
                     }
+                    // 合計行のマイナス判定
+                    if (checkIsNegative(cellText)) {
+                        td.classList.add('is-negative');
+                    }
                 } else {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cellText !== null ? cellText : '';
                     
+                    // 初期値のマイナス判定
+                    if (checkIsNegative(input.value)) {
+                        td.classList.add('is-negative');
+                    }
+
                     input.oninput = function() {
                         currentTableData[i][colIndex] = input.value;
+                        // 入力中のリアルタイムなマイナス判定
+                        if (checkIsNegative(input.value)) {
+                            td.classList.add('is-negative');
+                        } else {
+                            td.classList.remove('is-negative');
+                        }
                     };
                     td.appendChild(input);
                 }
@@ -358,17 +391,11 @@
                 leftPos += colWidths[c];
             }
             element.style.left = `${leftPos}px`;
-            
-            // 固定列の重なり順（ヘッダーと交差する場所は一番手前に）
             element.style.zIndex = isHeader ? '4' : '3';
 
-            // 固定列の右端（3列目の右側）にしっかりとした境界の影をつけて見やすくする
             if (colIndex === 2) {
                 element.style.boxShadow = '4px 0 6px -2px rgba(0, 0, 0, 0.1)';
             }
-            
-            // 固定列の背景色を、合計行や通常行に合わせて綺麗に維持する
-            // ※合計行の固定部分は合計行の色に、通常行の固定部分は白に保つ
         }
     }
 </script>
