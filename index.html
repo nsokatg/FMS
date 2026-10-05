@@ -17,14 +17,14 @@
         }
         .table-container {
             max-width: 100%;
-            max-height: 80vh; /* 縦スクロールもさせたい場合の高さ制限 */
+            max-height: 80vh;
             overflow: auto;
             background: #fff;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         table {
-            width: max-content; /* 表の幅を中身に合わせて自動調整（スクロール用） */
+            width: max-content;
             border-collapse: collapse;
             white-space: nowrap;
         }
@@ -35,16 +35,12 @@
             font-size: 0.9rem;
             background-color: #fff;
         }
-        /* ヘッダー全体の基本スタイル */
         th {
             background-color: #e9ecef;
             position: sticky;
             top: 0;
             z-index: 1;
         }
-        
-        /* 列ごとの固定（Sticky）と幅の指定はJavaScriptから動的に付与します */
-
         td input {
             width: 100%;
             border: none;
@@ -64,6 +60,9 @@
         }
         .toolbar {
             margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         button {
             padding: 8px 16px;
@@ -77,6 +76,12 @@
         button:hover {
             background-color: #0056b3;
         }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -85,6 +90,9 @@
     
     <div class="toolbar">
         <button onclick="loadSpreadsheetData()">データを再読み込み</button>
+        <button onclick="addRow()">＋ 行（費目）を追加</button>
+        <button onclick="addColumn()">＋ 列（年月）を追加</button>
+        <button class="btn-success" onclick="saveDataToSpreadsheet()">変更をスプレッドシートに保存</button>
     </div>
 
     <div class="table-container">
@@ -96,13 +104,13 @@
     </div>
 
 <script>
-    // ★ここにGASのウェブアプリのURLを貼り付けてください
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycby0x78HWq-FWw98h3o2WgS_jukEJnoZR03N21OLKGXNrkzu4aoDzNqHaIMKTCcEanjw4Q/exec";
 
-    // 各列の幅（ピクセル）の定義
-    // 0列目: 費目, 1列目: 発生月, 2列目: 発生日, 3列目以降（年月など）: 一律120px
     const colWidths = [220, 120, 120]; 
     const defaultColWidth = 120;
+
+    // 現在画面に表示されているデータを保持する変数
+    let currentTableData = [];
 
     window.onload = function() {
         loadSpreadsheetData();
@@ -120,7 +128,8 @@
             const rows = await response.json();
 
             if (rows && rows.length > 0) {
-                renderTable(rows);
+                currentTableData = rows;
+                renderTable();
                 loadingEl.style.display = 'none';
                 tableEl.style.display = 'table';
             } else {
@@ -132,95 +141,161 @@
         }
     }
 
-    // 年月文字列を「YYYY年M月」形式に綺麗にフォーマットする関数
     function formatYearMonth(text) {
         if (!text) return '';
-        // すでに「〇〇年〇〇月」の形であればそのまま返す
         if (text.toString().includes('年')) return text;
 
-        // Dateオブジェクトや日付文字列の場合のパース
         let d = new Date(text);
         if (!isNaN(d.getTime())) {
             return `${d.getFullYear()}年${d.getMonth() + 1}月`;
         }
 
-        // 「2026/1」や「2026-01」などの形式への簡易対応
         let match = text.toString().match(/^(\d{4})[\/\-](\d{1,2})$/);
         if (match) {
             return `${match[1]}年${parseInt(match[2], 10)}月`;
         }
 
-        return text; // どれにも当てはまらない場合はそのまま
+        return text;
     }
 
-    function renderTable(rows) {
+    function renderTable() {
         const thead = document.getElementById('tableHead');
         const tbody = document.getElementById('tableBody');
         
         thead.innerHTML = '';
         tbody.innerHTML = '';
 
+        if (currentTableData.length === 0) return;
+
         // 1. ヘッダー行の描画
         const headerRow = document.createElement('tr');
-        rows[0].forEach((cellText, colIndex) => {
+        currentTableData[0].forEach((cellText, colIndex) => {
             const th = document.createElement('th');
-            
-            // 3列目（D列以降、インデックス3以上）の年月表示をフォーマット
             if (colIndex >= 3) {
                 th.innerText = formatYearMonth(cellText);
             } else {
                 th.innerText = cellText !== null ? cellText : '';
             }
-
-            // 列幅とスクロール固定（左側3列）のスタイル適用
             applyCellStyles(th, colIndex, true);
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
 
         // 2. データ行の描画
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 1; i < currentTableData.length; i++) {
             const tr = document.createElement('tr');
-            rows[i].forEach((cellText, colIndex) => {
+            currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.value = cellText !== null ? cellText : '';
                 
-                input.dataset.row = i;
-                input.dataset.col = colIndex;
+                // 入力内容が変更されたらメモリ上のデータ（currentTableData）を即時更新
+                input.oninput = function() {
+                    currentTableData[i][colIndex] = input.value;
+                };
                 
                 td.appendChild(input);
-                
-                // 列幅とスクロール固定（左側3列）のスタイル適用
                 applyCellStyles(td, colIndex, false);
-                
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
         }
     }
 
-    // セルに幅と、左側3列用の「横スクロール固定（sticky）」を設定する共通関数
+    // ── 【機能】行（費目）を追加する ──
+    function addRow() {
+        if (currentTableData.length === 0) return;
+        const totalCols = currentTableData[0].length;
+        
+        // 全列分が空の新しい行を作成
+        const newRow = new Array(totalCols).fill('');
+        currentTableData.push(newRow);
+        
+        renderTable();
+        // 追加された行へスクロール
+        const container = document.querySelector('.table-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // ── 【機能】列（年月）を追加する ──
+    function addColumn() {
+        if (currentTableData.length === 0) return;
+
+        // 既存の最後の列名から新しい年月を推測する
+        let nextYearMonth = "2026年1月";
+        const headerRow = currentTableData[0];
+        if (headerRow.length > 3) {
+            const lastHeader = headerRow[headerRow.length - 1].toString();
+            let match = lastHeader.match(/(\d{4})年(\d{1,2})月/);
+            if (match) {
+                let y = parseInt(match[1], 10);
+                let m = parseInt(match[2], 10) + 1;
+                if (m > 12) { m = 1; y += 1; }
+                nextYearMonth = `${y}年${m}月`;
+            }
+        }
+
+        // ユーザーに入力を促す（デフォルトで自動推測値を入れる）
+        let userInput = prompt("追加する年月を入力してください（例: 2026年8月）", nextYearMonth);
+        if (!userInput) return; // キャンセルされたら何もしない
+
+        // 1行目（ヘッダー）に新しい年月を追加
+        currentTableData[0].push(userInput);
+
+        // 2行目以降のデータ行には、新しい列分の空セル（""）を追加
+        for (let i = 1; i < currentTableData.length; i++) {
+            currentTableData[i].push('');
+        }
+
+        renderTable();
+    }
+
+    // ── 【機能】スプレッドシートにデータを保存する ──
+    async function saveDataToSpreadsheet() {
+        if (!confirm("現在の内容をスプレッドシートに保存しますか？")) return;
+
+        const loadingEl = document.getElementById('loading');
+        loadingEl.innerText = "保存中...";
+        loadingEl.style.display = 'block';
+
+        try {
+            const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                body: JSON.stringify(currentTableData),
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8" // GASのPOST受け取り用のおまじない
+                }
+            });
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                alert("保存が完了しました！");
+            } else {
+                alert("保存に失敗しました: " + result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("通信エラーが発生しました。");
+        } finally {
+            loadingEl.style.display = 'none';
+        }
+    }
+
     function applyCellStyles(element, colIndex, isHeader) {
         let width = colIndex < colWidths.length ? colWidths[colIndex] : defaultColWidth;
         element.style.width = `${width}px`;
         element.style.minWidth = `${width}px`;
         element.style.maxWidth = `${width}px`;
 
-        // 左から0, 1, 2列目（費目・発生月・発生日）は左端に固定する
         if (colIndex < 3) {
             element.style.position = 'sticky';
-            
-            // 左からの累積距離を計算して配置
             let leftPos = 0;
             for (let c = 0; c < colIndex; c++) {
                 leftPos += colWidths[c];
             }
             element.style.left = `${leftPos}px`;
-            
-            // スクロール時に下に潜り込む他のデータより手前に表示させるためのZindex
             element.style.zIndex = isHeader ? '3' : '2';
         }
     }
