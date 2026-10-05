@@ -41,7 +41,6 @@
             top: 0;
             z-index: 1;
         }
-        /* 合計行（一番下の行）のデザインを目立たせる */
         tr.total-row td {
             background-color: #e9ecef;
             font-weight: bold;
@@ -190,7 +189,7 @@
 
         for (let i = 1; i < currentTableData.length; i++) {
             const tr = document.createElement('tr');
-            const isTotalRow = (i === lastRowIndex); // 最終行かどうか
+            const isTotalRow = (i === lastRowIndex);
             if (isTotalRow) tr.classList.add('total-row');
 
             currentTableData[i].forEach((cellText, colIndex) => {
@@ -203,7 +202,6 @@
                     input.type = 'text';
                     input.value = cellText !== null ? cellText : '';
                     
-                    // 入力時のデータを即時反映
                     input.oninput = function() {
                         currentTableData[i][colIndex] = input.value;
                     };
@@ -217,19 +215,14 @@
         }
     }
 
-    // ── 【機能】行（費目）を合計行の1つ手前に追加する ──
     function addRow() {
         if (currentTableData.length < 2) return;
         const totalCols = currentTableData[0].length;
-        
         const newRow = new Array(totalCols).fill('');
-        
         currentTableData.splice(currentTableData.length - 1, 0, newRow);
-        
         renderTable();
     }
 
-    // ── 【機能】列（年月）を追加する ──
     function addColumn() {
         if (currentTableData.length === 0) return;
 
@@ -258,7 +251,6 @@
         renderTable();
     }
 
-    // ── 【機能】スプレッドシートにデータを保存する ──
     async function saveDataToSpreadsheet() {
         if (!confirm("現在の内容をスプレッドシートに保存しますか？")) return;
 
@@ -267,16 +259,15 @@
         loadingEl.style.display = 'block';
 
         try {
-            // 【追加対策】保存ボタンを押した瞬間、画面上のすべてのインプット要素から最新の値を確実に回収する
+            // 画面上の最新のインプット値をすべて回収する
             const tbody = document.getElementById('tableBody');
             const trs = tbody.querySelectorAll('tr');
             
             trs.forEach((tr, i) => {
-                const dataIndex = i + 1; // ヘッダーを除いたデータ行のインデックス
-                if (dataIndex < currentTableData.length - 1) { // 明細行のみ対象
+                const dataIndex = i + 1;
+                if (dataIndex < currentTableData.length - 1) {
                     const inputs = tr.querySelectorAll('input');
                     inputs.forEach((input) => {
-                        // どの列のインプットか特定するため、td要素のインデックスを調べる
                         const td = input.parentElement;
                         const colIndex = Array.from(tr.children).indexOf(td);
                         if (colIndex !== -1) {
@@ -286,12 +277,10 @@
                 }
             });
 
-            // 最後の行（合計行）を除外したデータだけを送信データとして切り出す
-            const dataToSend = currentTableData.slice(0, currentTableData.length - 1);
-
+            // 合計行も含めて全データを送信する（GAS側で合計行の数式を保護・復元する仕組みにしました）
             const response = await fetch(GAS_API_URL, {
                 method: "POST",
-                body: JSON.stringify(dataToSend),
+                body: JSON.stringify(currentTableData),
                 headers: {
                     "Content-Type": "text/plain;charset=utf-8"
                 }
@@ -300,7 +289,7 @@
             
             if (result.status === "success") {
                 alert("保存が完了しました！");
-                loadSpreadsheetData(); // 再読み込みしてスプレッドシート側の計算結果を反映
+                loadSpreadsheetData();
             } else {
                 alert("保存に失敗しました: " + result.message);
             }
