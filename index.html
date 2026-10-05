@@ -247,13 +247,39 @@
         let userInput = prompt("追加する年月を入力してください（例: 2026年8月）", nextYearMonth);
         if (!userInput) return;
 
+        // 1. ヘッダー行に新しい年月を追加
         currentTableData[0].push(userInput);
 
+        const lastRowIndex = currentTableData.length - 1;
+
+        // 2. 各行にデータを追加（合計行には自動的にSUM数式をセット）
         for (let i = 1; i < currentTableData.length; i++) {
-            currentTableData[i].push('');
+            if (i === lastRowIndex) {
+                // 合計行の場合：新しく追加される列のSUM数式を組み立てて入れる
+                const newColIndex = currentTableData[0].length; // 新しい列番号（1始まり）
+                const colLetter = columnToLetter(newColIndex);
+                const startRow = 2;
+                const endRow = lastRowIndex; // 明細の最終行
+                
+                currentTableData[i].push(`=SUM(${colLetter}${startRow}:${colLetter}${endRow})`);
+            } else {
+                // 明細行の場合：空文字を追加
+                currentTableData[i].push('');
+            }
         }
 
         renderTable();
+    }
+
+    // 列番号（1, 2, 3...）をアルファベット（A, B, C...）に変換する補助関数
+    function columnToLetter(column) {
+        let temp, letter = '';
+        while (column > 0) {
+            temp = (column - 1) % 26;
+            letter = String.fromCharCode(65 + temp) + letter;
+            column = (column - temp - 1) / 26;
+        }
+        return letter;
     }
 
     async function saveDataToSpreadsheet() {
@@ -281,7 +307,7 @@
                 }
             });
 
-            // 【追加】保存して送信する直前に、最終行の1列目に「計」を確実にセットする
+            // 保存して送信する直前に、最終行の1列目に「計」を確実にセットする
             const lastRowIdx = currentTableData.length - 1;
             if (lastRowIdx >= 0) {
                 currentTableData[lastRowIdx][0] = "計";
