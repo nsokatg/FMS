@@ -7,43 +7,55 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 20px;
-            background-color: #f8f9fa;
+            margin: 24px;
+            background-color: #f4f6f9;
             color: #333;
         }
         h1 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
+            font-size: 1.6rem;
+            margin-bottom: 16px;
+            color: #2c3e50;
+            font-weight: 600;
         }
         .table-container {
             max-width: 100%;
             max-height: 80vh;
             overflow: auto;
             background: #fff;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid #b0bec5;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
         }
         table {
             width: max-content;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             white-space: nowrap;
         }
         th, td {
-            border: 1px solid #dee2e6;
-            padding: 8px 12px;
+            border-right: 1px solid #ced4da;
+            border-bottom: 1px solid #ced4da;
+            padding: 10px 14px;
             text-align: left;
             font-size: 0.9rem;
             background-color: #fff;
         }
+        /* 上下の罫線を補強 */
         th {
-            background-color: #e9ecef;
+            border-top: 1px solid #ced4da;
+            background-color: #e2e8f0;
+            color: #2d3748;
+            font-weight: 600;
             position: sticky;
             top: 0;
-            z-index: 1;
+            z-index: 2;
         }
+        /* 合計行のデザイン */
         tr.total-row td {
-            background-color: #e9ecef;
+            background-color: #edf2f7;
             font-weight: bold;
+            color: #1a202c;
+            border-top: 2px solid #a0aec0;
         }
         td input {
             width: 100%;
@@ -51,40 +63,45 @@
             background: transparent;
             font-size: 0.9rem;
             outline: none;
+            color: #2d3748;
         }
         td input:focus {
             background: #fff;
-            box-shadow: inset 0 0 0 2px #80bdff;
+            box-shadow: inset 0 0 0 2px #3182ce;
+            border-radius: 2px;
         }
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             font-size: 1.1rem;
-            color: #6c757d;
+            color: #718096;
         }
         .toolbar {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             display: flex;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         button {
-            padding: 8px 16px;
-            background-color: #007bff;
+            padding: 9px 18px;
+            background-color: #3182ce;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #2b6cb0;
         }
         .btn-success {
-            background-color: #28a745;
+            background-color: #38a169;
         }
         .btn-success:hover {
-            background-color: #218838;
+            background-color: #2f855a;
         }
     </style>
 </head>
@@ -108,7 +125,7 @@
     </div>
 
 <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx0QGuQmEbsZPHjKiRqk-OcxrW0i1FkpTsKqXyHpk8Swy22lhhc66guhw8e7NugFWkX9g/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwbhvZH6vv9eKhvTnbdUoJ8rlM-x5DSWTwlPAYU0CQe8Vwk5vuSwoWXUPMPweeVH4o5HA/exec";
 
     const colWidths = [220, 120, 120]; 
     const defaultColWidth = 120;
@@ -196,7 +213,6 @@
                 const td = document.createElement('td');
                 
                 if (isTotalRow) {
-                    // 合計行の1列目が空になっている場合は「計」を表示用に補う
                     if (colIndex === 0 && (!cellText || cellText === "")) {
                         td.innerText = "計";
                     } else {
@@ -247,23 +263,19 @@
         let userInput = prompt("追加する年月を入力してください（例: 2026年8月）", nextYearMonth);
         if (!userInput) return;
 
-        // 1. ヘッダー行に新しい年月を追加
         currentTableData[0].push(userInput);
 
         const lastRowIndex = currentTableData.length - 1;
 
-        // 2. 各行にデータを追加（合計行には自動的にSUM数式をセット）
         for (let i = 1; i < currentTableData.length; i++) {
             if (i === lastRowIndex) {
-                // 合計行の場合：新しく追加される列のSUM数式を組み立てて入れる
-                const newColIndex = currentTableData[0].length; // 新しい列番号（1始まり）
+                const newColIndex = currentTableData[0].length;
                 const colLetter = columnToLetter(newColIndex);
                 const startRow = 2;
-                const endRow = lastRowIndex; // 明細の最終行
+                const endRow = lastRowIndex;
                 
                 currentTableData[i].push(`=SUM(${colLetter}${startRow}:${colLetter}${endRow})`);
             } else {
-                // 明細行の場合：空文字を追加
                 currentTableData[i].push('');
             }
         }
@@ -271,7 +283,6 @@
         renderTable();
     }
 
-    // 列番号（1, 2, 3...）をアルファベット（A, B, C...）に変換する補助関数
     function columnToLetter(column) {
         let temp, letter = '';
         while (column > 0) {
@@ -290,7 +301,6 @@
         loadingEl.style.display = 'block';
 
         try {
-            // 画面上の最新の入力値を回収する
             const tbody = document.getElementById('tableBody');
             const trs = tbody.querySelectorAll('tr');
             
@@ -307,7 +317,6 @@
                 }
             });
 
-            // 保存して送信する直前に、最終行の1列目に「計」を確実にセットする
             const lastRowIdx = currentTableData.length - 1;
             if (lastRowIdx >= 0) {
                 currentTableData[lastRowIdx][0] = "計";
@@ -349,7 +358,17 @@
                 leftPos += colWidths[c];
             }
             element.style.left = `${leftPos}px`;
-            element.style.zIndex = isHeader ? '3' : '2';
+            
+            // 固定列の重なり順（ヘッダーと交差する場所は一番手前に）
+            element.style.zIndex = isHeader ? '4' : '3';
+
+            // 固定列の右端（3列目の右側）にしっかりとした境界の影をつけて見やすくする
+            if (colIndex === 2) {
+                element.style.boxShadow = '4px 0 6px -2px rgba(0, 0, 0, 0.1)';
+            }
+            
+            // 固定列の背景色を、合計行や通常行に合わせて綺麗に維持する
+            // ※合計行の固定部分は合計行の色に、通常行の固定部分は白に保つ
         }
     }
 </script>
