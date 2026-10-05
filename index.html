@@ -185,7 +185,7 @@
         });
         thead.appendChild(headerRow);
 
-        // 2. データ行の描画（最後から1行前＝合計行の手前まで）
+        // 2. データ行の描画
         const lastRowIndex = currentTableData.length - 1;
 
         for (let i = 1; i < currentTableData.length; i++) {
@@ -196,21 +196,15 @@
             currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
-                // 最終行（合計行）のD列以降（colIndex >= 3）にはSUM計算式を自動設定する
-                if (isTotalRow && colIndex >= 3) {
-                    // Excel/スプレッドシート用のSUM数式（例: =SUM(D2:D14)）
-                    const startCellLetter = getColumnLetter(colIndex);
-                    const formula = `=SUM(${startCellLetter}2:${startCellLetter}${lastRowIndex})`;
-                    
-                    currentTableData[i][colIndex] = formula; // メモリ側も数式に更新
-                    td.innerText = formula; // 画面上には数式を表示（またはプレビュー）
+                // 最終行（合計行）の場合は、入力欄にせず、スプレッドシートから取得した値（計算結果など）をそのままテキストとして表示する
+                if (isTotalRow) {
+                    td.innerText = cellText !== null ? cellText : '';
                 } else {
-                    // 通常の行、または合計行の費目ラベル（「計」など）
+                    // 通常の行は入力可能なテキストボックスにする
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cellText !== null ? cellText : '';
                     
-                    // 合計行の文字（「計」など）は変更不可にする場合はここで制御可能ですが、一応入力可能にしています
                     input.oninput = function() {
                         currentTableData[i][colIndex] = input.value;
                     };
@@ -222,18 +216,6 @@
             });
             tbody.appendChild(tr);
         }
-    }
-
-    // 列番号（0, 1, 2...）をスプレッドシートのアルファベット（A, B, C... D, E...）に変換する補助関数
-    function getColumnLetter(colIndex) {
-        let temp, letter = '';
-        colIndex++;
-        while (colIndex > 0) {
-            temp = (colIndex - 1) % 26;
-            letter = String.fromCharCode(temp + 65) + letter;
-            colIndex = (colIndex - temp - 1) / 26;
-        }
-        return letter;
     }
 
     // ── 【機能】行（費目）を合計行の1つ手前に追加する ──
