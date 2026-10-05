@@ -36,9 +36,13 @@
             border-right: 1px solid #ced4da;
             border-bottom: 1px solid #ced4da;
             padding: 10px 14px;
-            text-align: left;
+            text-align: left; /* デフォルトは左寄せ */
             font-size: 0.9rem;
             background-color: #fff;
+        }
+        /* 4列目以降（数値・金額エリア）は右寄せにする */
+        th.numeric-col, td.numeric-col {
+            text-align: right;
         }
         /* 上下の罫線を補強 */
         th {
@@ -64,6 +68,10 @@
             font-size: 0.9rem;
             outline: none;
             color: #2d3748;
+        }
+        /* 4列目以降の入力欄を右寄せにする */
+        td.numeric-col input {
+            text-align: right;
         }
         /* マイナス値の入力欄・セルを赤字にするスタイル */
         .is-negative input,
@@ -184,11 +192,9 @@
         return text;
     }
 
-    // 値がマイナスかどうかを判定する補助関数
     function checkIsNegative(val) {
         if (val === null || val === undefined) return false;
         const str = val.toString().trim();
-        // 半角ハイフン (-) または全角マイナス (ー, −) で始まる、あるいは数値として0未満の場合
         if (str.startsWith('-') || str.startsWith('ー') || str.startsWith('−')) {
             return true;
         }
@@ -211,6 +217,7 @@
             const th = document.createElement('th');
             if (colIndex >= 3) {
                 th.innerText = formatYearMonth(cellText);
+                th.classList.add('numeric-col'); // 4列目以降のヘッダーを右寄せ
             } else {
                 th.innerText = cellText !== null ? cellText : '';
             }
@@ -230,13 +237,19 @@
             currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
+                // 3列目（インデックス2）以降、または4列目以降を数値用（右寄せ）にする場合の判定
+                // （※左側の固定3列は費目名などの文字列なので左寄せのまま、4列目以降のデータセルを右寄せにします）
+                const isNumeric = (colIndex >= 3);
+                if (isNumeric) {
+                    td.classList.add('numeric-col');
+                }
+
                 if (isTotalRow) {
                     if (colIndex === 0 && (!cellText || cellText === "")) {
                         td.innerText = "計";
                     } else {
                         td.innerText = cellText !== null ? cellText : '';
                     }
-                    // 合計行のマイナス判定
                     if (checkIsNegative(cellText)) {
                         td.classList.add('is-negative');
                     }
@@ -245,14 +258,12 @@
                     input.type = 'text';
                     input.value = cellText !== null ? cellText : '';
                     
-                    // 初期値のマイナス判定
                     if (checkIsNegative(input.value)) {
                         td.classList.add('is-negative');
                     }
 
                     input.oninput = function() {
                         currentTableData[i][colIndex] = input.value;
-                        // 入力中のリアルタイムなマイナス判定
                         if (checkIsNegative(input.value)) {
                             td.classList.add('is-negative');
                         } else {
@@ -379,7 +390,7 @@
     }
 
     function applyCellStyles(element, colIndex, isHeader) {
-        let width = colIndex < colWidths.length ? colWidths[colIndex] : defaultColWidth;
+        let width = colIndex < colWidths.length ? colWidths[colIndex] / 1 : defaultColWidth;
         element.style.width = `${width}px`;
         element.style.minWidth = `${width}px`;
         element.style.maxWidth = `${width}px`;
