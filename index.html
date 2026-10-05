@@ -41,6 +41,11 @@
             top: 0;
             z-index: 1;
         }
+        /* 合計行（一番下の行）のデザインを目立たせる */
+        tr.total-row td {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
         td input {
             width: 100%;
             border: none;
@@ -104,12 +109,11 @@
     </div>
 
 <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwsdCJLaDu7IFvMT4E9Be_JAPDkkUkOuToQqZ5TmHKx7uc9tAQ5yGVnmhp1qgag59ENkg/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby0x78HWq-FWw98h3o2WgS_jukEJnoZR03N21OLKGXNrkzu4aoDzNqHaIMKTCcEanjw4Q/exec";
 
     const colWidths = [220, 120, 120]; 
     const defaultColWidth = 120;
 
-    // 現在画面に表示されているデータを保持する変数
     let currentTableData = [];
 
     window.onload = function() {
@@ -181,22 +185,38 @@
         });
         thead.appendChild(headerRow);
 
-        // 2. データ行の描画
+        // 2. データ行の描画（最後から1行前＝合計行の手前まで）
+        const lastRowIndex = currentTableData.length - 1;
+
         for (let i = 1; i < currentTableData.length; i++) {
             const tr = document.createElement('tr');
+            const isTotalRow = (i === lastRowIndex); // 最終行かどうか
+            if (isTotalRow) tr.classList.add('total-row');
+
             currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = cellText !== null ? cellText : '';
-                
-                // 入力内容が変更されたらメモリ上のデータ（currentTableData）を即時更新
-                input.oninput = function() {
-                    currentTableData[i][colIndex] = input.value;
-                };
-                
-                td.appendChild(input);
+                // 最終行（合計行）のD列以降（colIndex >= 3）にはSUM計算式を自動設定する
+                if (isTotalRow && colIndex >= 3) {
+                    // Excel/スプレッドシート用のSUM数式（例: =SUM(D2:D14)）
+                    const startCellLetter = getColumnLetter(colIndex);
+                    const formula = `=SUM(${startCellLetter}2:${startCellLetter}${lastRowIndex})`;
+                    
+                    currentTableData[i][colIndex] = formula; // メモリ側も数式に更新
+                    td.innerText = formula; // 画面上には数式を表示（またはプレビュー）
+                } else {
+                    // 通常の行、または合計行の費目ラベル（「計」など）
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = cellText !== null ? cellText : '';
+                    
+                    // 合計行の文字（「計」など）は変更不可にする場合はここで制御可能ですが、一応入力可能にしています
+                    input.oninput = function() {
+                        currentTableData[i][colIndex] = input.value;
+                    };
+                    td.appendChild(input);
+                }
+
                 applyCellStyles(td, colIndex, false);
                 tr.appendChild(td);
             });
@@ -204,26 +224,35 @@
         }
     }
 
-    // ── 【機能】行（費目）を追加する ──
+    // 列番号（0, 1, 2...）をスプレッドシートのアルファベット（A, B, C... D, E...）に変換する補助関数
+    function getColumnLetter(colIndex) {
+        let temp, letter = '';
+        colIndex++;
+        while (colIndex > 0) {
+            temp = (colIndex - 1) % 26;
+            letter = String.fromCharCode(temp + 65) + letter;
+            colIndex = (colIndex - temp - 1) / 26;
+        }
+        return letter;
+    }
+
+    // ── 【機能】行（費目）を合計行の1つ手前に追加する ──
     function addRow() {
-        if (currentTableData.length === 0) return;
+        if (currentTableData.length < 2) return;
         const totalCols = currentTableData[0].length;
         
-        // 全列分が空の新しい行を作成
         const newRow = new Array(totalCols).fill('');
-        currentTableData.push(newRow);
+        
+        // 最終行（合計行）の直前に挿入する
+        currentTableData.splice(currentTableData.length - 1, 0, newRow);
         
         renderTable();
-        // 追加された行へスクロール
-        const container = document.querySelector('.table-container');
-        container.scrollTop = container.scrollHeight;
     }
 
     // ── 【機能】列（年月）を追加する ──
     function addColumn() {
         if (currentTableData.length === 0) return;
 
-        // 既存の最後の列名から新しい年月を推測する
         let nextYearMonth = "2026年1月";
         const headerRow = currentTableData[0];
         if (headerRow.length > 3) {
@@ -237,14 +266,11 @@
             }
         }
 
-        // ユーザーに入力を促す（デフォルトで自動推測値を入れる）
         let userInput = prompt("追加する年月を入力してください（例: 2026年8月）", nextYearMonth);
-        if (!userInput) return; // キャンセルされたら何もしない
+        if (!userInput) return;
 
-        // 1行目（ヘッダー）に新しい年月を追加
         currentTableData[0].push(userInput);
 
-        // 2行目以降のデータ行には、新しい列分の空セル（""）を追加
         for (let i = 1; i < currentTableData.length; i++) {
             currentTableData[i].push('');
         }
@@ -265,13 +291,14 @@
                 method: "POST",
                 body: JSON.stringify(currentTableData),
                 headers: {
-                    "Content-Type": "text/plain;charset=utf-8" // GASのPOST受け取り用のおまじない
+                    "Content-Type": "text/plain;charset=utf-8"
                 }
             });
             const result = await response.json();
             
             if (result.status === "success") {
                 alert("保存が完了しました！");
+                loadSpreadsheetData(); // 再読み込みしてスプレッドシート側の計算結果を反映
             } else {
                 alert("保存に失敗しました: " + result.message);
             }
