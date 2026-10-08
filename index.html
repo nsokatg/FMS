@@ -36,15 +36,13 @@
             border-right: 1px solid #ced4da;
             border-bottom: 1px solid #ced4da;
             padding: 10px 14px;
-            text-align: left; /* デフォルトは左寄せ */
+            text-align: left;
             font-size: 0.9rem;
             background-color: #fff;
         }
-        /* 4列目以降（数値・金額エリア）は右寄せにする */
         th.numeric-col, td.numeric-col {
             text-align: right;
         }
-        /* 上下の罫線を補強 */
         th {
             border-top: 1px solid #ced4da;
             background-color: #e2e8f0;
@@ -54,7 +52,6 @@
             top: 0;
             z-index: 2;
         }
-        /* 合計行のデザイン */
         tr.total-row td {
             background-color: #edf2f7;
             font-weight: bold;
@@ -69,11 +66,9 @@
             outline: none;
             color: #2d3748;
         }
-        /* 4列目以降の入力欄を右寄せにする */
         td.numeric-col input {
             text-align: right;
         }
-        /* マイナス値の入力欄・セルを赤字にするスタイル */
         .is-negative input,
         td.is-negative {
             color: #e53e3e !important;
@@ -184,6 +179,7 @@
             return `${d.getFullYear()}年${d.getMonth() + 1}月`;
         }
 
+        // ここを修正しました
         let match = text.toString().match(/^(\d{4})[\/\-](\d{1,2})$/);
         if (match) {
             return `${match[1]}年${parseInt(match[2], 10)}月`;
@@ -217,7 +213,7 @@
             const th = document.createElement('th');
             if (colIndex >= 3) {
                 th.innerText = formatYearMonth(cellText);
-                th.classList.add('numeric-col'); // 4列目以降のヘッダーを右寄せ
+                th.classList.add('numeric-col');
             } else {
                 th.innerText = cellText !== null ? cellText : '';
             }
@@ -237,8 +233,6 @@
             currentTableData[i].forEach((cellText, colIndex) => {
                 const td = document.createElement('td');
                 
-                // 3列目（インデックス2）以降、または4列目以降を数値用（右寄せ）にする場合の判定
-                // （※左側の固定3列は費目名などの文字列なので左寄せのまま、4列目以降のデータセルを右寄せにします）
                 const isNumeric = (colIndex >= 3);
                 if (isNumeric) {
                     td.classList.add('numeric-col');
