@@ -35,9 +35,9 @@
         th, td {
             border-right: 1px solid #ced4da;
             border-bottom: 1px solid #ced4da;
-            padding: 10px 14px;
+            padding: 6px 10px; /* 行高さを狭めるためにパディングを調整 */
             text-align: left;
-            font-size: 0.9rem;
+            font-size: 0.85rem; /* フォントサイズを少し小さく調整 */
             background-color: #fff;
         }
         th.numeric-col, td.numeric-col {
@@ -62,7 +62,7 @@
             width: 100%;
             border: none;
             background: transparent;
-            font-size: 0.9rem;
+            font-size: 0.85rem; /* 入力欄のフォントサイズも連動して小さく */
             outline: none;
             color: #2d3748;
         }
@@ -179,7 +179,6 @@
             return `${d.getFullYear()}年${d.getMonth() + 1}月`;
         }
 
-        // ここを修正しました
         let match = text.toString().match(/^(\d{4})[\/\-](\d{1,2})$/);
         if (match) {
             return `${match[1]}年${parseInt(match[2], 10)}月`;
