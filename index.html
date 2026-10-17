@@ -35,10 +35,14 @@
         th, td {
             border-right: 1px solid #ced4da;
             border-bottom: 1px solid #ced4da;
-            padding: 2px 8px; /* 上下の高さをさらに詰めてコンパクト化 */
+            padding: 2px 8px;
             text-align: left;
             font-size: 0.8rem;
             background-color: #fff;
+        }
+        /* ゼブラ配色：合計行を除いた偶数行の背景色を変更して見やすくする */
+        #tableBody tr:not(.total-row):nth-child(even) td {
+            background-color: #f8fafc;
         }
         th.numeric-col, td.numeric-col {
             text-align: right;
